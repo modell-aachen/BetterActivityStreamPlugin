@@ -8,6 +8,11 @@ use warnings;
 use Foswiki::Func    ();    # The plugins API
 use Foswiki::Plugins ();    # For the API version
 
+use Digest::SHA ();
+use JSON;
+
+use Foswiki::Plugins::TaskDaemonPlugin;
+
 our $VERSION = '0.0';
 our $RELEASE = '0.0';
 
@@ -31,6 +36,45 @@ sub initPlugin {
     return 1;
 }
 
+sub addEvent {
+    my ($event) = @_;
+
+    unless ( defined $event->{id} ) {
+        # ... Exception
+    }
+
+    my $collection = $Foswiki::cfg{SolrPlugin}{DefaultCollection} || "wiki";
+    $event->{collection} = $collection;
+    $event->{url} ||= 'dummy';
+    $event->{type} = 'event';
+
+    _send($event);
+}
+
+sub addFirstEvent {
+
+    my ($event) = @_;
+
+    unless ( defined $event->{id} ) {
+        $event->{id} = Digest::SHA::sha256_hex(rand(9999).encode_json($event));
+    }
+    my $collection = $Foswiki::cfg{SolrPlugin}{DefaultCollection} || "wiki";
+    $event->{collection} = $collection;
+    $event->{url} ||= 'dummy';
+    $event->{type} = 'event';
+
+    _send($event);
+
+    return $event->{id};
+}
+
+sub _send {
+    my ($event, $type) = @_;
+
+    $type ||= 'update_event';
+
+    Foswiki::Plugins::TaskDaemonPlugin::send($event, $type, 'BetterActivityStreamPlugin');
+}
 
 1;
 
