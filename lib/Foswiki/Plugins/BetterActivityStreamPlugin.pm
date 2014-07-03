@@ -31,9 +31,34 @@ sub initPlugin {
         return 0;
     }
 
+    Foswiki::Func::registerRESTHandler(
+        'dismiss', \&_restDismiss,
+        authenticate => 1, http_allow => 'GET' );
 
     # Plugin correctly initialized
     return 1;
+}
+
+sub _restDismiss {
+    my ( $session, $subject, $verb, $response ) = @_;
+    my $query = $session->{request};
+
+    my $id = $query->param('id');
+    my $who = Foswiki::Func::getCanonicalUserID();
+
+    my $action = {
+        id => $id,
+        who => $who,
+    };
+
+    _send($action, 'dismiss_event');
+
+    my $context = $query->param('context');
+    if(!$context || $context eq 'personalpage') {
+        my $url = Foswiki::Func::getScriptUrl( $Foswiki::cfg{UsersWeb}, Foswiki::Func::getWikiName(), 'view' );
+        Foswiki::Func::redirectCgiQuery( undef, $url );
+    }
+
 }
 
 sub addEvent {
